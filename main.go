@@ -106,7 +106,7 @@ func runList(args []string) error {
 	var host string
 	fs.StringVar(&repo, "repo", "", "owner/name (defaults to gh repo view)")
 	fs.IntVar(&pr, "pr", 0, "PR number")
-	fs.StringVar(&status, "status", "all", "all|resolved|unresolved")
+	fs.StringVar(&status, "status", "all", "all|resolved|unresolved|resolved-no-reply")
 	fs.BoolVar(&jsonOut, "json", false, "output JSON")
 	fs.StringVar(&host, "host", gh.DefaultHost(), "GitHub host")
 	if err := fs.Parse(args); err != nil {
