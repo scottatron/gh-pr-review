@@ -1,6 +1,10 @@
 ---
 name: pr-review-gh
 description: Systematic workflow for addressing PR review comments using gh-pr-review CLI. Use when the user wants to work through PR review comments and prefers the gh-pr-review tool over helper scripts.
+compatibility: Requires gh CLI auth, gh-pr-review on PATH, and network access to GitHub API.
+metadata:
+  author: scottatron
+  version: "1.0"
 ---
 
 # PR Review Comment Workflow (gh-pr-review CLI)
