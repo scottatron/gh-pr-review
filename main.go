@@ -12,6 +12,7 @@ import (
 
 	"gh-pr-review/internal/gh"
 	"gh-pr-review/internal/github"
+	"golang.org/x/term"
 )
 
 type reviewThread struct {
@@ -319,19 +320,29 @@ func printThreads(threads []reviewThread) {
 		fmt.Fprintln(os.Stdout, "no review threads found")
 		return
 	}
+	styler := newStyler(os.Stdout)
 	for _, t := range threads {
 		status := "unresolved"
 		if t.IsResolved {
 			status = "resolved"
 		}
 		lineInfo := formatLineInfo(t)
-		fmt.Fprintf(os.Stdout, "Thread %s (%s)%s\n", t.ID, status, lineInfo)
+		fmt.Fprintf(os.Stdout, "%s %s %s%s\n",
+			styler.label("Thread"),
+			styler.threadID(t.ID),
+			styler.status(status),
+			lineInfo,
+		)
 		for _, c := range t.Comments.Nodes {
 			author := c.Author.Login
 			if author == "" {
 				author = "unknown"
 			}
-			fmt.Fprintf(os.Stdout, "  - %s at %s\n", author, c.CreatedAt)
+			fmt.Fprintf(os.Stdout, "  %s %s %s\n",
+				styler.bullet(),
+				styler.author(author),
+				styler.dim(c.CreatedAt),
+			)
 			for _, line := range strings.Split(strings.TrimRight(c.Body, "\n"), "\n") {
 				fmt.Fprintf(os.Stdout, "    %s\n", line)
 			}
@@ -429,6 +440,54 @@ func setThreadResolved(ctx context.Context, client *github.Client, threadID stri
 func exitErr(err error) {
 	fmt.Fprintf(os.Stderr, "error: %v\n", err)
 	os.Exit(1)
+}
+
+type styler struct {
+	enabled bool
+}
+
+func newStyler(w io.Writer) styler {
+	if os.Getenv("NO_COLOR") != "" {
+		return styler{enabled: false}
+	}
+	if f, ok := w.(*os.File); ok {
+		return styler{enabled: term.IsTerminal(int(f.Fd()))}
+	}
+	return styler{enabled: false}
+}
+
+func (s styler) wrap(code, text string) string {
+	if !s.enabled {
+		return text
+	}
+	return "\x1b[" + code + "m" + text + "\x1b[0m"
+}
+
+func (s styler) label(text string) string {
+	return s.wrap("1;36", text) // bold cyan
+}
+
+func (s styler) threadID(text string) string {
+	return s.wrap("36", text)
+}
+
+func (s styler) status(text string) string {
+	if text == "resolved" {
+		return s.wrap("32", text)
+	}
+	return s.wrap("31", text)
+}
+
+func (s styler) author(text string) string {
+	return s.wrap("34", text)
+}
+
+func (s styler) dim(text string) string {
+	return s.wrap("2", text)
+}
+
+func (s styler) bullet() string {
+	return s.wrap("2", "•")
 }
 
 func printListUsage(w io.Writer) {
