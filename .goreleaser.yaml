@@ -1,0 +1,44 @@
+version: 2
+
+project_name: gh-pr-review
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: gh-pr-review
+    main: .
+    binary: gh-pr-review
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: default
+    builds:
+      - gh-pr-review
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+
+release:
+  github:
+    owner: scottatron
+    name: gh-pr-review
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
