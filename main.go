@@ -94,6 +94,9 @@ func printUsage() {
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body-file <path> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review resolve --thread-id <id> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review unresolve --thread-id <id> [--host host]")
+	fmt.Fprintln(os.Stdout, "")
+	fmt.Fprintln(os.Stdout, "Notes:")
+	fmt.Fprintln(os.Stdout, "  Flags can be passed as -pr or --pr (Go's flag parser accepts both).")
 }
 
 func runList(args []string) error {
