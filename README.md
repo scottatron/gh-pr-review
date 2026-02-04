@@ -7,33 +7,39 @@ CLI tool to manage GitHub PR review threads using the GitHub GraphQL API and you
 - Go 1.21+ (or compatible)
 - `gh` CLI authenticated (`gh auth login`)
 
+## Build
+
+```bash
+go build -o gh-pr-review .
+```
+
 ## Usage
 
 List review threads (all/resolved/unresolved/resolved-no-reply):
 
 ```bash
-go run . list --pr 123 --repo owner/name
-go run . list --pr 123 --status unresolved
-go run . list --pr 123 --status resolved-no-reply
+./gh-pr-review list --pr 123 --repo owner/name
+./gh-pr-review list --pr 123 --status unresolved
+./gh-pr-review list --pr 123 --status resolved-no-reply
 ```
 
 JSON output:
 
 ```bash
-go run . list --pr 123 --json
+./gh-pr-review list --pr 123 --json
 ```
 
 Reply to a thread:
 
 ```bash
-go run . reply --thread-id THREAD_ID --body "Thanks!"
+./gh-pr-review reply --thread-id THREAD_ID --body "Thanks!"
 ```
 
 Resolve/unresolve a thread:
 
 ```bash
-go run . resolve --thread-id THREAD_ID
-go run . unresolve --thread-id THREAD_ID
+./gh-pr-review resolve --thread-id THREAD_ID
+./gh-pr-review unresolve --thread-id THREAD_ID
 ```
 
 ## Notes
