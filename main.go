@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"gh-pr-review/internal/gh"
@@ -80,6 +81,8 @@ func main() {
 		}
 	case "help", "-h", "--help":
 		printUsage()
+	case "version", "--version":
+		printVersion(os.Stdout)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", sub)
 		printUsage()
@@ -96,6 +99,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body-file <path> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review resolve --thread-id <id> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review unresolve --thread-id <id> [--host host]")
+	fmt.Fprintln(os.Stdout, "  gh-pr-review version")
 }
 
 func runList(args []string) error {
@@ -525,4 +529,28 @@ func printResolveUsage(w io.Writer, resolve bool) {
 	fmt.Fprintln(w, "Flags:")
 	fmt.Fprintln(w, "  --thread-id <id>   Review thread ID (required)")
 	fmt.Fprintln(w, "  --host <host>   GitHub host")
+}
+
+func printVersion(w io.Writer) {
+	info, ok := debug.ReadBuildInfo()
+	if !ok || info == nil {
+		fmt.Fprintln(w, "version: unknown")
+		return
+	}
+	version := info.Main.Version
+	if version == "" || version == "(devel)" {
+		version = "dev"
+	}
+	fmt.Fprintf(w, "version: %s\n", version)
+	for _, setting := range info.Settings {
+		if setting.Key == "vcs.revision" {
+			fmt.Fprintf(w, "commit: %s\n", setting.Value)
+		}
+		if setting.Key == "vcs.time" {
+			fmt.Fprintf(w, "date: %s\n", setting.Value)
+		}
+		if setting.Key == "vcs.modified" {
+			fmt.Fprintf(w, "dirty: %s\n", setting.Value)
+		}
+	}
 }
