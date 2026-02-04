@@ -5,6 +5,8 @@ description: Systematic workflow for addressing PR review comments using gh-pr-r
 
 # PR Review Comment Workflow (gh-pr-review CLI)
 
+GitHub repo: https://github.com/scottatron/gh-pr-review
+
 A systematic approach to addressing PR review comments efficiently: fetch all threads, present options for each issue, collect all decisions upfront, implement fixes in a single commit, and document resolutions.
 
 ## Requirements
