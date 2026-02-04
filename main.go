@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -94,14 +95,12 @@ func printUsage() {
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body-file <path> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review resolve --thread-id <id> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review unresolve --thread-id <id> [--host host]")
-	fmt.Fprintln(os.Stdout, "")
-	fmt.Fprintln(os.Stdout, "Notes:")
-	fmt.Fprintln(os.Stdout, "  Flags can be passed as -pr or --pr (Go's flag parser accepts both).")
 }
 
 func runList(args []string) error {
 	fs := flag.NewFlagSet("list", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
+	fs.Usage = func() { printListUsage(fs.Output()) }
 	var repo string
 	var pr int
 	var status string
@@ -113,6 +112,9 @@ func runList(args []string) error {
 	fs.BoolVar(&jsonOut, "json", false, "output JSON")
 	fs.StringVar(&host, "host", gh.DefaultHost(), "GitHub host")
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 	if pr <= 0 {
@@ -154,6 +156,7 @@ func runList(args []string) error {
 func runReply(args []string) error {
 	fs := flag.NewFlagSet("reply", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
+	fs.Usage = func() { printReplyUsage(fs.Output()) }
 	var threadID string
 	var body string
 	var bodyFile string
@@ -163,6 +166,9 @@ func runReply(args []string) error {
 	fs.StringVar(&bodyFile, "body-file", "", "Read reply body from file")
 	fs.StringVar(&host, "host", gh.DefaultHost(), "GitHub host")
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 	if threadID == "" {
@@ -188,11 +194,15 @@ func runReply(args []string) error {
 func runResolve(args []string, resolve bool) error {
 	fs := flag.NewFlagSet("resolve", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
+	fs.Usage = func() { printResolveUsage(fs.Output(), resolve) }
 	var threadID string
 	var host string
 	fs.StringVar(&threadID, "thread-id", "", "Review thread ID")
 	fs.StringVar(&host, "host", gh.DefaultHost(), "GitHub host")
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 	if threadID == "" {
@@ -419,4 +429,41 @@ func setThreadResolved(ctx context.Context, client *github.Client, threadID stri
 func exitErr(err error) {
 	fmt.Fprintf(os.Stderr, "error: %v\n", err)
 	os.Exit(1)
+}
+
+func printListUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  gh-pr-review list --pr <number> [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host] [--json]")
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "Flags:")
+	fmt.Fprintln(w, "  --pr <number>   PR number (required)")
+	fmt.Fprintln(w, "  --repo <owner/name>   Repository (defaults to gh repo view)")
+	fmt.Fprintln(w, "  --status <value>   all|resolved|unresolved|resolved-no-reply")
+	fmt.Fprintln(w, "  --json   Output JSON")
+	fmt.Fprintln(w, "  --host <host>   GitHub host")
+}
+
+func printReplyUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  gh-pr-review reply --thread-id <id> --body <text> [--host host]")
+	fmt.Fprintln(w, "  gh-pr-review reply --thread-id <id> --body-file <path> [--host host]")
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "Flags:")
+	fmt.Fprintln(w, "  --thread-id <id>   Review thread ID (required)")
+	fmt.Fprintln(w, "  --body <text>   Reply body")
+	fmt.Fprintln(w, "  --body-file <path>   Read reply body from file")
+	fmt.Fprintln(w, "  --host <host>   GitHub host")
+}
+
+func printResolveUsage(w io.Writer, resolve bool) {
+	action := "resolve"
+	if !resolve {
+		action = "unresolve"
+	}
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintf(w, "  gh-pr-review %s --thread-id <id> [--host host]\n", action)
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "Flags:")
+	fmt.Fprintln(w, "  --thread-id <id>   Review thread ID (required)")
+	fmt.Fprintln(w, "  --host <host>   GitHub host")
 }
