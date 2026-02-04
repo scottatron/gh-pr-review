@@ -89,7 +89,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stdout, "gh-pr-review: manage GitHub PR review threads")
 	fmt.Fprintln(os.Stdout, "")
 	fmt.Fprintln(os.Stdout, "Usage:")
-	fmt.Fprintln(os.Stdout, "  gh-pr-review list --pr <number> [--repo owner/name] [--status all|resolved|unresolved] [--host host] [--json]")
+	fmt.Fprintln(os.Stdout, "  gh-pr-review list --pr <number> [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host] [--json]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body <text> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body-file <path> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review resolve --thread-id <id> [--host host]")
@@ -119,7 +119,7 @@ func runList(args []string) error {
 	if status == "" {
 		status = "all"
 	}
-	if status != "all" && status != "resolved" && status != "unresolved" {
+	if status != "all" && status != "resolved" && status != "unresolved" && status != "resolved-no-reply" {
 		return fmt.Errorf("invalid --status %q", status)
 	}
 
@@ -281,11 +281,21 @@ func filterThreads(threads []reviewThread, status string) []reviewThread {
 	if status == "all" {
 		return threads
 	}
-	wantResolved := status == "resolved"
 	filtered := make([]reviewThread, 0, len(threads))
 	for _, t := range threads {
-		if t.IsResolved == wantResolved {
-			filtered = append(filtered, t)
+		switch status {
+		case "resolved":
+			if t.IsResolved {
+				filtered = append(filtered, t)
+			}
+		case "unresolved":
+			if !t.IsResolved {
+				filtered = append(filtered, t)
+			}
+		case "resolved-no-reply":
+			if t.IsResolved && len(t.Comments.Nodes) <= 1 {
+				filtered = append(filtered, t)
+			}
 		}
 	}
 	return filtered
