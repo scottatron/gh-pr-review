@@ -4,7 +4,7 @@ description: Systematic workflow for addressing PR review comments using gh-pr-r
 compatibility: Requires gh CLI auth, gh-pr-review on PATH, and network access to GitHub API.
 metadata:
   author: scottatron
-  version: "1.0"
+  version: "0.1.0"
 ---
 
 # PR Review Comment Workflow (gh-pr-review CLI)
