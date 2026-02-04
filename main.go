@@ -13,6 +13,7 @@ import (
 
 	"gh-pr-review/internal/gh"
 	"gh-pr-review/internal/github"
+	"github.com/charmbracelet/glamour"
 	"golang.org/x/term"
 )
 
@@ -36,6 +37,7 @@ type reviewComment struct {
 	ID        string `json:"id"`
 	Body      string `json:"body"`
 	CreatedAt string `json:"createdAt"`
+	URL       string `json:"url"`
 	Author    struct {
 		Login string `json:"login"`
 	} `json:"author"`
@@ -261,6 +263,7 @@ func fetchAllThreads(ctx context.Context, client *github.Client, owner, name str
               id
               body
               createdAt
+              url
               author { login }
             }
           }
@@ -331,7 +334,7 @@ func printThreads(threads []reviewThread) {
 			status = "resolved"
 		}
 		lineInfo := formatLineInfo(t)
-		fmt.Fprintf(os.Stdout, "%s %s %s%s\n",
+		fmt.Fprintf(os.Stdout, "%s %s %s%s\n\n",
 			styler.label("Thread"),
 			styler.threadID(t.ID),
 			styler.status(status),
@@ -342,15 +345,23 @@ func printThreads(threads []reviewThread) {
 			if author == "" {
 				author = "unknown"
 			}
-			fmt.Fprintf(os.Stdout, "  %s %s %s\n",
+			meta := styler.dim(c.CreatedAt)
+			fmt.Fprintf(os.Stdout, "  %s %s — %s\n",
 				styler.bullet(),
 				styler.author(author),
-				styler.dim(c.CreatedAt),
+				meta,
 			)
-			for _, line := range strings.Split(strings.TrimRight(c.Body, "\n"), "\n") {
-				fmt.Fprintf(os.Stdout, "    %s\n", line)
+			if c.URL != "" {
+				fmt.Fprintf(os.Stdout, "    %s\n", styler.dim(c.URL))
+			}
+			fmt.Fprintln(os.Stdout, "")
+			for _, line := range formatCommentBody(c.Body, "  ", 120, styler) {
+				fmt.Fprintln(os.Stdout, line)
 			}
 		}
+		fmt.Fprintln(os.Stdout, "")
+		fmt.Fprintf(os.Stdout, "    %s\n", styler.separator())
+		fmt.Fprintln(os.Stdout, "")
 	}
 }
 
@@ -492,6 +503,119 @@ func (s styler) dim(text string) string {
 
 func (s styler) bullet() string {
 	return s.wrap("2", "•")
+}
+
+func (s styler) separator() string {
+	return s.wrap("2", "----------------------------------------")
+}
+
+func formatCommentBody(body, indent string, width int, styler styler) []string {
+	if styler.enabled {
+		rendered, err := renderMarkdown(body, width-len(indent))
+		if err == nil {
+			return indentRendered(rendered, indent)
+		}
+	}
+	return wrapPlainText(body, indent, width)
+}
+
+func renderMarkdown(body string, width int) (string, error) {
+	if width < 20 {
+		width = 20
+	}
+	renderer, err := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(width),
+	)
+	if err != nil {
+		return "", err
+	}
+	return renderer.Render(body)
+}
+
+func indentRendered(rendered, indent string) []string {
+	trimmed := strings.TrimRight(rendered, "\n")
+	if trimmed == "" {
+		return []string{indent}
+	}
+	lines := strings.Split(trimmed, "\n")
+	out := make([]string, 0, len(lines))
+	for _, line := range lines {
+		out = append(out, indent+line)
+	}
+	return out
+}
+
+func wrapPlainText(body, indent string, width int) []string {
+	lines := strings.Split(strings.TrimRight(body, "\n"), "\n")
+	if len(lines) == 0 {
+		return []string{indent}
+	}
+	maxWidth := width
+	if maxWidth < len(indent)+20 {
+		maxWidth = len(indent) + 20
+	}
+
+	var out []string
+	var paragraph []string
+	inFence := false
+
+	flushParagraph := func() {
+		if len(paragraph) == 0 {
+			return
+		}
+		text := strings.Join(paragraph, " ")
+		for _, wrapped := range wrapText(text, maxWidth-len(indent)) {
+			out = append(out, indent+wrapped)
+		}
+		paragraph = paragraph[:0]
+	}
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "```") {
+			flushParagraph()
+			if len(out) > 0 && out[len(out)-1] != indent {
+				out = append(out, indent)
+			}
+			out = append(out, indent+line)
+			inFence = !inFence
+			continue
+		}
+
+		if inFence {
+			out = append(out, indent+line)
+			continue
+		}
+
+		if trimmed == "" {
+			flushParagraph()
+			out = append(out, indent)
+			continue
+		}
+		paragraph = append(paragraph, trimmed)
+	}
+	flushParagraph()
+	return out
+}
+
+func wrapText(text string, width int) []string {
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return []string{""}
+	}
+	var lines []string
+	current := words[0]
+	for _, word := range words[1:] {
+		if len(current)+1+len(word) > width {
+			lines = append(lines, current)
+			current = word
+			continue
+		}
+		current = current + " " + word
+	}
+	lines = append(lines, current)
+	return lines
 }
 
 func printListUsage(w io.Writer) {
