@@ -13,6 +13,10 @@ type RepoView struct {
 	NameWithOwner string `json:"nameWithOwner"`
 }
 
+type PrView struct {
+	Number int `json:"number"`
+}
+
 func DefaultHost() string {
 	if host := strings.TrimSpace(os.Getenv("GH_HOST")); host != "" {
 		return host
@@ -51,4 +55,20 @@ func RepoViewCurrent(ctx context.Context) (RepoView, error) {
 		return RepoView{}, errors.New("gh repo view returned empty nameWithOwner")
 	}
 	return view, nil
+}
+
+func CurrentPrNumber(ctx context.Context) (int, error) {
+	cmd := exec.CommandContext(ctx, "gh", "pr", "view", "--json", "number")
+	out, err := cmd.Output()
+	if err != nil {
+		return 0, err
+	}
+	var view PrView
+	if err := json.Unmarshal(out, &view); err != nil {
+		return 0, err
+	}
+	if view.Number <= 0 {
+		return 0, errors.New("gh pr view returned empty number")
+	}
+	return view.Number, nil
 }

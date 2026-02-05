@@ -96,7 +96,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stdout, "gh-pr-review: manage GitHub PR review threads")
 	fmt.Fprintln(os.Stdout, "")
 	fmt.Fprintln(os.Stdout, "Usage:")
-	fmt.Fprintln(os.Stdout, "  gh-pr-review list --pr <number> [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host] [--json]")
+	fmt.Fprintln(os.Stdout, "  gh-pr-review list [--pr <number>] [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host] [--json]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body <text> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body-file <path> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review resolve --thread-id <id> [--host host]")
@@ -124,8 +124,13 @@ func runList(args []string) error {
 		}
 		return err
 	}
+	ctx := context.Background()
 	if pr <= 0 {
-		return errors.New("--pr is required")
+		derived, err := gh.CurrentPrNumber(ctx)
+		if err != nil {
+			return fmt.Errorf("--pr is required (and could not be derived from current checkout): %w", err)
+		}
+		pr = derived
 	}
 	status = strings.ToLower(strings.TrimSpace(status))
 	if status == "" {
@@ -135,7 +140,6 @@ func runList(args []string) error {
 		return fmt.Errorf("invalid --status %q", status)
 	}
 
-	ctx := context.Background()
 	owner, name, err := resolveRepo(ctx, repo)
 	if err != nil {
 		return err
@@ -620,10 +624,10 @@ func wrapText(text string, width int) []string {
 
 func printListUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  gh-pr-review list --pr <number> [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host] [--json]")
+	fmt.Fprintln(w, "  gh-pr-review list [--pr <number>] [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host] [--json]")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Flags:")
-	fmt.Fprintln(w, "  --pr <number>   PR number (required)")
+	fmt.Fprintln(w, "  --pr <number>   PR number (defaults to current branch PR if available)")
 	fmt.Fprintln(w, "  --repo <owner/name>   Repository (defaults to gh repo view)")
 	fmt.Fprintln(w, "  --status <value>   all|resolved|unresolved|resolved-no-reply")
 	fmt.Fprintln(w, "  --json   Output JSON")
