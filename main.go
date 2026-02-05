@@ -69,6 +69,10 @@ func main() {
 		if err := runList(os.Args[2:]); err != nil {
 			exitErr(err)
 		}
+	case "tui":
+		if err := runTUI(os.Args[2:]); err != nil {
+			exitErr(err)
+		}
 	case "reply":
 		if err := runReply(os.Args[2:]); err != nil {
 			exitErr(err)
@@ -97,6 +101,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stdout, "")
 	fmt.Fprintln(os.Stdout, "Usage:")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review list [--pr <number>] [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host] [--json]")
+	fmt.Fprintln(os.Stdout, "  gh-pr-review tui [--pr <number>] [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body <text> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body-file <path> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review resolve --thread-id <id> [--host host]")
@@ -608,17 +613,39 @@ func wrapText(text string, width int) []string {
 	if len(words) == 0 {
 		return []string{""}
 	}
+	if width <= 0 {
+		return []string{text}
+	}
 	var lines []string
-	current := words[0]
-	for _, word := range words[1:] {
-		if len(current)+1+len(word) > width {
+	current := ""
+	flush := func() {
+		if current != "" {
 			lines = append(lines, current)
+			current = ""
+		}
+	}
+	for _, word := range words {
+		for len(word) > width {
+			if current != "" {
+				flush()
+			}
+			runes := []rune(word)
+			chunk := string(runes[:width])
+			lines = append(lines, chunk)
+			word = string(runes[width:])
+		}
+		if current == "" {
+			current = word
+			continue
+		}
+		if len(current)+1+len(word) > width {
+			flush()
 			current = word
 			continue
 		}
 		current = current + " " + word
 	}
-	lines = append(lines, current)
+	flush()
 	return lines
 }
 
