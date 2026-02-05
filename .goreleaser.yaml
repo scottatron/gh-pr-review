@@ -32,13 +32,11 @@ release:
   github:
     owner: scottatron
     name: gh-pr-review
+  header: |
+    {{ .TagContents }}
 
 checksum:
   name_template: 'checksums.txt'
 
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
+  skip: true
