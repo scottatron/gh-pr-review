@@ -406,7 +406,13 @@ func resolveBody(body, bodyFile string) (string, error) {
 func replyToThread(ctx context.Context, client *github.Client, threadID, body string) error {
 	mutation := `mutation($threadId:ID!, $body:String!) {
   addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$threadId, body:$body}) {
-    comment { id }
+    comment {
+      id
+      pullRequestReview {
+        id
+        state
+      }
+    }
   }
 }`
 	vars := map[string]interface{}{
@@ -416,7 +422,11 @@ func replyToThread(ctx context.Context, client *github.Client, threadID, body st
 	var resp struct {
 		AddPullRequestReviewThreadReply struct {
 			Comment struct {
-				ID string `json:"id"`
+				ID                string `json:"id"`
+				PullRequestReview struct {
+					ID    string `json:"id"`
+					State string `json:"state"`
+				} `json:"pullRequestReview"`
 			} `json:"comment"`
 		} `json:"addPullRequestReviewThreadReply"`
 	}
@@ -424,6 +434,46 @@ func replyToThread(ctx context.Context, client *github.Client, threadID, body st
 		return err
 	}
 	fmt.Fprintf(os.Stdout, "replied with comment id %s\n", resp.AddPullRequestReviewThreadReply.Comment.ID)
+	review := resp.AddPullRequestReviewThreadReply.Comment.PullRequestReview
+	if review.ID != "" && strings.EqualFold(review.State, "PENDING") {
+		if err := submitPullRequestReview(ctx, client, review.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func submitPullRequestReview(ctx context.Context, client *github.Client, reviewID string) error {
+	mutation := `mutation($reviewId:ID!) {
+  submitPullRequestReview(input:{pullRequestReviewId:$reviewId, event:COMMENT}) {
+    pullRequestReview {
+      id
+      state
+    }
+  }
+}`
+	vars := map[string]interface{}{
+		"reviewId": reviewID,
+	}
+	var resp struct {
+		SubmitPullRequestReview struct {
+			PullRequestReview struct {
+				ID    string `json:"id"`
+				State string `json:"state"`
+			} `json:"pullRequestReview"`
+		} `json:"submitPullRequestReview"`
+	}
+	if err := client.Do(ctx, mutation, vars, &resp); err != nil {
+		return err
+	}
+	if resp.SubmitPullRequestReview.PullRequestReview.ID == "" {
+		return errors.New("missing submitted review id")
+	}
+	state := strings.ToLower(resp.SubmitPullRequestReview.PullRequestReview.State)
+	if state == "" {
+		state = "submitted"
+	}
+	fmt.Fprintf(os.Stdout, "submitted review %s with state %s\n", resp.SubmitPullRequestReview.PullRequestReview.ID, state)
 	return nil
 }
 

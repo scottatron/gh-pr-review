@@ -4,14 +4,14 @@ description: Systematic workflow for addressing PR review comments using gh-pr-r
 compatibility: Requires gh CLI auth, gh-pr-review on PATH, and network access to GitHub API.
 metadata:
   author: scottatron
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # PR Review Comment Workflow (gh-pr-review CLI)
 
 GitHub repo: https://github.com/scottatron/gh-pr-review
 
-A systematic approach to addressing PR review comments efficiently: fetch all threads, present options for each issue, collect all decisions upfront, implement fixes in a single commit, and document resolutions.
+A systematic approach to addressing PR review comments efficiently: fetch unresolved threads, work through them one by one with the user, implement and verify each fix before moving to the next issue, and keep review state clean as each thread is resolved.
 
 ## Requirements
 
@@ -69,11 +69,11 @@ If you need all threads, use `--status all`.
 - `thread.line` - Line number
 - `comments[].body` / `comments[].author.login` - comment context
 
-Organize threads by file path, severity (Critical/Medium/Low), and theme (security, bugs, quality, docs).
+Identify the next thread to handle based on priority (critical bugs first, then correctness, then quality/docs). Keep the remaining threads queued, but only actively discuss one issue at a time.
 
 ### 2. Analysis
 
-For each comment group:
+For the current thread only:
 
 1. Understand the issue and its impact
 2. Identify 2-4 resolution approaches with trade-offs
@@ -82,7 +82,7 @@ For each comment group:
 
 ### 3. Decision Collection
 
-Present ALL issues before implementing ANY fixes.
+Present exactly one issue at a time. Do not batch multiple review comments into one decision step, and do not ask the user to approve a whole set of issues up front.
 
 **Format:**
 ```
@@ -98,35 +98,35 @@ Options:
 Recommendation: Option X because [reasoning]
 ```
 
-Use AskUserQuestion to collect decisions:
-- Present 1-4 issues per question
-- Batch by theme or priority for large sets
-- Include skip/defer options when appropriate
+Collect the user's decision for the current thread, then move immediately into implementation for that thread before discussing the next one.
 
-**Key Principle:** Never start implementing until user has decided on ALL comments.
+**Key Principle:** The loop is always:
+Fetch unresolved threads -> pick one thread -> discuss one thread -> implement one thread -> reply/resolve one thread -> verify -> move to the next thread.
 
 ### 4. Implementation
 
-After collecting all decisions:
+After the user decides how to handle the current thread:
 
-1. Plan file edit order (dependencies first)
-2. Make all changes based on user's choices
-3. Check for related code needing similar fixes
-4. Update affected documentation
-5. Reply to and resolve each thread as it's addressed:
+1. Make the smallest coherent code or documentation change needed for that thread
+2. Check for closely related code that must change with it to keep behavior consistent
+3. Run the most relevant verification for that specific change
+4. Reply to and resolve the thread as soon as the fix is ready:
 
 ```bash
- gh-pr-review reply --thread-id "THREAD_ID" --body "Fixed in collaboration with Claude Code - [brief description]"
+ gh-pr-review reply --thread-id "THREAD_ID" --body "Fixed in collaboration with Codex - [brief description]"
  gh-pr-review resolve --thread-id "THREAD_ID"
 ```
 
-6. Run tests
+5. Ensure the work is not left in a pending review state before moving on:
+- Prefer `gh-pr-review reply`, which should auto-submit the review if GitHub associates the reply with a pending review.
+- If any other tool created a pending review while addressing the thread, submit or clean it up before continuing.
+6. Refresh the unresolved thread list and continue with the next highest-priority thread
 
-Keep changes focused - only what was discussed, maintain existing style, preserve backward compatibility.
+Keep changes focused to the current thread. Do not silently absorb additional review issues into the same user decision unless they are inseparable from the fix.
 
 ### 5. Commit
 
-Create comprehensive commit message:
+Create a comprehensive commit message once the intended set of threads for the round is complete:
 
 ```
 fix: address [source] PR review comments
@@ -145,7 +145,7 @@ fix: address [source] PR review comments
 **Changes:**
 - path/to/file: [what changed and why]
 
-All [N] review threads addressed.
+All addressed review threads in this round are resolved.
 
 Relates to #[PR_NUMBER]
 ```
@@ -159,13 +159,13 @@ Commit and push:
 
 ### 6. Verification
 
-Verify all review threads are resolved:
+Verify the targeted threads are resolved and no new unresolved threads were introduced:
 
 ```bash
  gh-pr-review list --pr [PR_NUMBER] --status unresolved --json
 ```
 
-If any threads remain unresolved, investigate and address them before considering the work complete.
+If threads remain unresolved, continue the one-by-one loop. Do not collapse back into a batch triage step.
 
 ## Multi-Round Strategy
 
@@ -175,12 +175,14 @@ For PRs with many comments (>10), split into rounds:
 - **Round 2:** Code quality (refactoring, performance, best practices)
 - **Round 3:** Polish (docs, examples, style)
 
-Each round follows full workflow: Fetch → Analyze → Decide → Implement → Commit
+Each round still processes threads sequentially: Fetch -> pick one -> analyze -> decide -> implement -> reply/resolve -> verify -> repeat
 
 ## Quality Checkpoints
 
 Before committing:
 - All user decisions implemented correctly
+- Threads were handled one by one, not as a batched approval step
+- No pending review was left behind after replying or resolving
 - No unintended side effects
 - Related code updated for consistency
 - Documentation reflects changes

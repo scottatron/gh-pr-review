@@ -37,6 +37,8 @@ Reply to a thread:
 gh-pr-review reply --thread-id THREAD_ID --body "Thanks!"
 ```
 
+If GitHub attaches that reply to a pending review, `gh-pr-review` submits the review immediately with a comment event so it is not left pending.
+
 Resolve/unresolve a thread:
 
 ```bash
