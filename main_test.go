@@ -192,3 +192,29 @@ func TestRunInstallSkillHelpDoesNotRequireHome(t *testing.T) {
 		t.Fatalf("runInstallSkill help: %v", err)
 	}
 }
+
+func TestRunSkillInstallUsesDefaultDir(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	if err := runSkill([]string{"install"}); err != nil {
+		t.Fatalf("runSkill install: %v", err)
+	}
+
+	installedPath := filepath.Join(homeDir, ".agents", "skills", embeddedSkillName, "SKILL.md")
+	if _, err := os.Stat(installedPath); err != nil {
+		t.Fatalf("expected installed skill at %s: %v", installedPath, err)
+	}
+}
+
+func TestRunSkillHelp(t *testing.T) {
+	output := captureStdout(t, func() {
+		if err := runSkill([]string{"--help"}); err != nil {
+			t.Fatalf("runSkill help: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "gh-pr-review skill <command>") {
+		t.Fatalf("expected skill help output, got %q", output)
+	}
+}
