@@ -146,7 +146,7 @@ func TestDefaultSkillInstallDirUsesHomeDirectory(t *testing.T) {
 		t.Fatalf("defaultSkillInstallDir: %v", err)
 	}
 
-	want := filepath.Join(homeDir, ".agent", "skills")
+	want := filepath.Join(homeDir, ".agents", "skills")
 	if got != want {
 		t.Fatalf("defaultSkillInstallDir = %q, want %q", got, want)
 	}
@@ -162,7 +162,7 @@ func TestRunInstallSkillUsesDefaultDir(t *testing.T) {
 		}
 	})
 
-	installedPath := filepath.Join(homeDir, ".agent", "skills", embeddedSkillName, "SKILL.md")
+	installedPath := filepath.Join(homeDir, ".agents", "skills", embeddedSkillName, "SKILL.md")
 	if _, err := os.Stat(installedPath); err != nil {
 		t.Fatalf("expected installed skill at %s: %v", installedPath, err)
 	}

@@ -17,7 +17,7 @@ Ensure `gh-pr-review` is on your `PATH` (for example, move it into `~/bin` or an
 
 ## Usage
 
-Install the embedded Hermes skill into the default agent skill directory (`~/.agent/skills`):
+Install the embedded agent skill into the default shared skills directory (`~/.agents/skills`):
 
 ```bash
 gh-pr-review install-skill

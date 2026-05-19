@@ -13,7 +13,7 @@ import (
 )
 
 const embeddedSkillName = "gh-pr-review"
-const defaultSkillInstallDirValue = "~/.agent/skills"
+const defaultSkillInstallDirValue = "~/.agents/skills"
 
 //go:embed skills/gh-pr-review/**
 var embeddedSkillFiles embed.FS
@@ -44,7 +44,7 @@ func runInstallSkill(args []string) error {
 func printInstallSkillUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gh-pr-review install-skill [--dir <path>]")
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Installs the embedded gh-pr-review Hermes skill into the target skills directory.")
+	fmt.Fprintln(w, "Installs the embedded gh-pr-review agent skill into the target skills directory.")
 }
 
 func defaultSkillInstallDir() (string, error) {
