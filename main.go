@@ -69,6 +69,10 @@ func main() {
 		if err := runList(os.Args[2:]); err != nil {
 			exitErr(err)
 		}
+	case "skill":
+		if err := runSkill(os.Args[2:]); err != nil {
+			exitErr(err)
+		}
 	case "tui":
 		if err := runTUI(os.Args[2:]); err != nil {
 			exitErr(err)
@@ -101,12 +105,38 @@ func printUsage() {
 	fmt.Fprintln(os.Stdout, "")
 	fmt.Fprintln(os.Stdout, "Usage:")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review list [--pr <number>] [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host] [--json]")
+	fmt.Fprintln(os.Stdout, "  gh-pr-review skill install [--dir <path>]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review tui [--pr <number>] [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body <text> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body-file <path> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review resolve --thread-id <id> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review unresolve --thread-id <id> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review version")
+}
+
+func runSkill(args []string) error {
+	if len(args) == 0 {
+		printSkillUsage(os.Stderr)
+		return errors.New("missing skill subcommand")
+	}
+
+	switch args[0] {
+	case "install":
+		return runInstallSkill(args[1:])
+	case "help", "-h", "--help":
+		printSkillUsage(os.Stdout)
+		return nil
+	default:
+		printSkillUsage(os.Stderr)
+		return fmt.Errorf("unknown skill command: %s", args[0])
+	}
+}
+
+func printSkillUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage: gh-pr-review skill <command>")
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "Commands:")
+	fmt.Fprintln(w, "  install [--dir <path>]  Install the embedded gh-pr-review agent skill")
 }
 
 func runList(args []string) error {

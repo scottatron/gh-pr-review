@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -113,4 +114,107 @@ func captureStdout(t *testing.T, fn func()) string {
 		t.Fatalf("read stdout: %v", err)
 	}
 	return string(data)
+}
+
+func TestInstallEmbeddedSkillCopiesSkill(t *testing.T) {
+	tempDir := t.TempDir()
+
+	installedPath, err := installEmbeddedSkill(tempDir)
+	if err != nil {
+		t.Fatalf("installEmbeddedSkill: %v", err)
+	}
+
+	got, err := os.ReadFile(filepath.Join(installedPath, "SKILL.md"))
+	if err != nil {
+		t.Fatalf("read installed skill: %v", err)
+	}
+	want, err := embeddedSkillFiles.ReadFile("skills/gh-pr-review/SKILL.md")
+	if err != nil {
+		t.Fatalf("read embedded skill: %v", err)
+	}
+	if string(got) != string(want) {
+		t.Fatalf("installed skill content mismatch")
+	}
+}
+
+func TestDefaultSkillInstallDirUsesHomeDirectory(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	got, err := defaultSkillInstallDir()
+	if err != nil {
+		t.Fatalf("defaultSkillInstallDir: %v", err)
+	}
+
+	want := filepath.Join(homeDir, ".agents", "skills")
+	if got != want {
+		t.Fatalf("defaultSkillInstallDir = %q, want %q", got, want)
+	}
+}
+
+func TestRunInstallSkillUsesDefaultDir(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	output := captureStdout(t, func() {
+		if err := runInstallSkill(nil); err != nil {
+			t.Fatalf("runInstallSkill: %v", err)
+		}
+	})
+
+	installedPath := filepath.Join(homeDir, ".agents", "skills", embeddedSkillName, "SKILL.md")
+	if _, err := os.Stat(installedPath); err != nil {
+		t.Fatalf("expected installed skill at %s: %v", installedPath, err)
+	}
+	if !strings.Contains(output, "installed skill") {
+		t.Fatalf("expected install output, got %q", output)
+	}
+}
+
+func TestRunInstallSkillAllowsExplicitDirWithoutHome(t *testing.T) {
+	tempDir := t.TempDir()
+	t.Setenv("HOME", "")
+
+	if err := runInstallSkill([]string{"--dir", tempDir}); err != nil {
+		t.Fatalf("runInstallSkill with explicit dir: %v", err)
+	}
+
+	installedPath := filepath.Join(tempDir, embeddedSkillName, "SKILL.md")
+	if _, err := os.Stat(installedPath); err != nil {
+		t.Fatalf("expected installed skill at %s: %v", installedPath, err)
+	}
+}
+
+func TestRunInstallSkillHelpDoesNotRequireHome(t *testing.T) {
+	t.Setenv("HOME", "")
+
+	if err := runInstallSkill([]string{"--help"}); err != nil {
+		t.Fatalf("runInstallSkill help: %v", err)
+	}
+}
+
+func TestRunSkillInstallUsesDefaultDir(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	if err := runSkill([]string{"install"}); err != nil {
+		t.Fatalf("runSkill install: %v", err)
+	}
+
+	installedPath := filepath.Join(homeDir, ".agents", "skills", embeddedSkillName, "SKILL.md")
+	if _, err := os.Stat(installedPath); err != nil {
+		t.Fatalf("expected installed skill at %s: %v", installedPath, err)
+	}
+}
+
+func TestRunSkillHelp(t *testing.T) {
+	output := captureStdout(t, func() {
+		if err := runSkill([]string{"--help"}); err != nil {
+			t.Fatalf("runSkill help: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "gh-pr-review skill <command>") {
+		t.Fatalf("expected skill help output, got %q", output)
+	}
 }
