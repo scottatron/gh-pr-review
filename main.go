@@ -69,6 +69,10 @@ func main() {
 		if err := runList(os.Args[2:]); err != nil {
 			exitErr(err)
 		}
+	case "install-skill":
+		if err := runInstallSkill(os.Args[2:]); err != nil {
+			exitErr(err)
+		}
 	case "tui":
 		if err := runTUI(os.Args[2:]); err != nil {
 			exitErr(err)
@@ -101,6 +105,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stdout, "")
 	fmt.Fprintln(os.Stdout, "Usage:")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review list [--pr <number>] [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host] [--json]")
+	fmt.Fprintln(os.Stdout, "  gh-pr-review install-skill [--dir <path>]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review tui [--pr <number>] [--repo owner/name] [--status all|resolved|unresolved|resolved-no-reply] [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body <text> [--host host]")
 	fmt.Fprintln(os.Stdout, "  gh-pr-review reply --thread-id <id> --body-file <path> [--host host]")
