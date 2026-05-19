@@ -13,6 +13,7 @@ import (
 )
 
 const embeddedSkillName = "gh-pr-review"
+const defaultSkillInstallDirValue = "~/.agent/skills"
 
 //go:embed skills/gh-pr-review/**
 var embeddedSkillFiles embed.FS
@@ -22,13 +23,8 @@ func runInstallSkill(args []string) error {
 	fs.SetOutput(os.Stderr)
 	fs.Usage = func() { printInstallSkillUsage(fs.Output()) }
 
-	defaultDir, err := defaultSkillInstallDir()
-	if err != nil {
-		return err
-	}
-
 	var dir string
-	fs.StringVar(&dir, "dir", defaultDir, "Install root for skills")
+	fs.StringVar(&dir, "dir", defaultSkillInstallDirValue, "Install root for skills")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
@@ -52,11 +48,7 @@ func printInstallSkillUsage(w io.Writer) {
 }
 
 func defaultSkillInstallDir() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("resolve home directory: %w", err)
-	}
-	return filepath.Join(homeDir, ".agent", "skills"), nil
+	return expandHomeDir(defaultSkillInstallDirValue)
 }
 
 func installEmbeddedSkill(dir string) (string, error) {

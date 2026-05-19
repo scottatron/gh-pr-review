@@ -170,3 +170,25 @@ func TestRunInstallSkillUsesDefaultDir(t *testing.T) {
 		t.Fatalf("expected install output, got %q", output)
 	}
 }
+
+func TestRunInstallSkillAllowsExplicitDirWithoutHome(t *testing.T) {
+	tempDir := t.TempDir()
+	t.Setenv("HOME", "")
+
+	if err := runInstallSkill([]string{"--dir", tempDir}); err != nil {
+		t.Fatalf("runInstallSkill with explicit dir: %v", err)
+	}
+
+	installedPath := filepath.Join(tempDir, embeddedSkillName, "SKILL.md")
+	if _, err := os.Stat(installedPath); err != nil {
+		t.Fatalf("expected installed skill at %s: %v", installedPath, err)
+	}
+}
+
+func TestRunInstallSkillHelpDoesNotRequireHome(t *testing.T) {
+	t.Setenv("HOME", "")
+
+	if err := runInstallSkill([]string{"--help"}); err != nil {
+		t.Fatalf("runInstallSkill help: %v", err)
+	}
+}
